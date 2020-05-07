@@ -27,7 +27,7 @@ func (handler *GraphQLHandler) Query(c echo.Context) error {
 		logrus.Error(err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
-	resolver.ResolverConnecetion = resolver.Init()
+
 	err = GqlResponse(c, graphql.MustParseSchema(s, resolver.ResolverConnecetion))
 	if err != nil {
 		logrus.Error(err)

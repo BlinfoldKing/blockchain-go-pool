@@ -1,3 +1,11 @@
+type NodeStatus {
+    id: String!
+    url: String!
+    ok: Boolean!
+    message: String!
+}
+
 type Query {
-    Connect(url: String!): Boolean!
+    Connect(url: String!): NodeStatus!
+    CheckNodesStatus(): [NodeStatus!]!
 }

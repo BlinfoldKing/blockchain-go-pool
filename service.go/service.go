@@ -7,7 +7,7 @@ import (
 )
 
 type Service struct {
-	nodes map[string]proto.BlockchainServiceClient
+	Nodes map[string]proto.BlockchainServiceClient
 }
 
 func (s Service) ConnectBlockchainNode(url string) error {
@@ -17,7 +17,7 @@ func (s Service) ConnectBlockchainNode(url string) error {
 	}
 
 	clientid := uuid.NewV4()
-	s.nodes[clientid.String()] = client
+	s.Nodes[clientid.String()] = client
 
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/blinfoldking/blockchain-go-node/proto"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
@@ -11,6 +12,7 @@ func ConnectNode(url string) (proto.BlockchainServiceClient, error) {
 	var conn *grpc.ClientConn
 	var err error
 
+	logrus.Println(url)
 	conn, err = grpc.Dial(url, grpc.WithInsecure())
 	if err != nil {
 		return nil, err

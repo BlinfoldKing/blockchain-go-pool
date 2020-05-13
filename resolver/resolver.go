@@ -8,36 +8,32 @@ import (
 	"github.com/blinfoldking/blockchain-go-pool/service"
 )
 
-var ResolverConnecetion *Resolver
+var ResolverConnection *Resolver
 
 type Resolver struct {
-	service service.Service
 }
 
 func Init() *Resolver {
-	nodes := make(map[string]service.Node)
-	return &Resolver{
-		service: service.Service{Nodes: nodes},
-	}
+	return &Resolver{}
 }
 
 func (s *Resolver) Connect(ctx context.Context, args struct{ Url string }) (status NodeResolver, err error) {
-	id, err := s.service.ConnectBlockchainNode(args.Url)
+	id, err := service.ServiceConnection.ConnectBlockchainNode(args.Url)
 	if err != nil {
 		return
 	}
 
 	return NodeResolver{
 		id,
-		s.service.Nodes[id].URL,
+		service.ServiceConnection.Nodes[id].URL,
 		true,
 		"",
 	}, nil
 }
 
 func (s *Resolver) CheckNodesStatus(ctx context.Context) (nodes []NodeResolver, err error) {
-	fmt.Println(s.service.Nodes)
-	for id, node := range s.service.Nodes {
+	fmt.Println(service.ServiceConnection.Nodes)
+	for id, node := range service.ServiceConnection.Nodes {
 		status, err := node.Client.Ping(context.Background(), &proto.Empty{})
 		fmt.Println(id, status)
 		if err != nil {

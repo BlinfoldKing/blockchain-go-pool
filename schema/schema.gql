@@ -5,7 +5,35 @@ type NodeStatus {
     message: String!
 }
 
+scalar JSON
+
+type QueueItem {
+  id: String!
+  type: String!
+  data: JSON!
+}
+
+type Block {
+    id: String!
+    nonce: Int!
+    block_type: String!
+    prev_hash: String!
+    data: JSON!
+    hash: String!
+}
+
+input UserRequest {
+    name: String!
+    nik: String!
+}
+
 type Query {
     Connect(url: String!): NodeStatus!
     CheckNodesStatus(): [NodeStatus!]!
+
+    GetAllBlockchainNode(node_id: String!): [Block!]!
+}
+
+type Mutation {
+    CreateUser(req: UserRequest!): QueueItem!
 }

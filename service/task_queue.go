@@ -23,6 +23,8 @@ type TaskData interface {
 	toJSON() []byte
 }
 
+type TaskStatus string
+
 const (
 	// TaskPublishBlock distribute block data to all nodes
 	TaskPublishBlock = "PUBLISH_BLOCK"
@@ -32,17 +34,27 @@ const (
 	TaskMutateBalance = "MUTATE_BALANCE"
 )
 
+const (
+	// TaskOnQueue task is on queue
+	TaskOnQueue = "ON_QUEUE"
+	// TaskOnProcess task in on consumer
+	TaskOnProcess = "ON_PROCESS"
+	// TaskOnComplete task is done
+	TaskOnComplete = "ON_COMPLETED"
+)
+
 type Task struct {
 	Type TaskType
 	Data []byte
 }
 
-func (s *Service) PushTask(task Task) error {
+func (s *Service) PushTask(id string, task Task) error {
 	t, err := json.Marshal(task)
 	if err != nil {
 		return err
 	}
 
 	s.TaskQueue.PublishBytes(t)
+	s.RedisClient.Set("task:"+id, TaskOnQueue, 0)
 	return nil
 }

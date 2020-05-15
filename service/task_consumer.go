@@ -5,11 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/adjust/rmq"
 	"github.com/blinfoldking/blockchain-go-node/proto"
-	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -17,6 +15,7 @@ type TaskConsumer struct{}
 
 func (consumer *TaskConsumer) Consume(delivery rmq.Delivery) {
 	var task Task
+
 	if err := json.Unmarshal([]byte(delivery.Payload()), &task); err != nil {
 		// handle error
 		delivery.Reject()
@@ -38,6 +37,12 @@ func (consumer *TaskConsumer) Consume(delivery rmq.Delivery) {
 			logrus.Error(err)
 			delivery.Reject()
 		}
+	case TaskMutateBalance:
+		err := PublishMutateBalance(task)
+		if err != nil {
+			logrus.Error(err)
+			delivery.Reject()
+		}
 	}
 
 	// perform task
@@ -45,11 +50,7 @@ func (consumer *TaskConsumer) Consume(delivery rmq.Delivery) {
 }
 
 func PublishCreateUser(task Task) error {
-	type Args struct {
-		Name string
-		Nik  string
-	}
-	var args Args
+	var args proto.CreateUserRequest
 
 	nodecount := len(ServiceConnection.Nodes)
 	if nodecount < 1 {
@@ -58,21 +59,13 @@ func PublishCreateUser(task Task) error {
 
 	json.Unmarshal(task.Data, &args)
 
-	ret := make(chan *proto.Block, 1)
+	ServiceConnection.RedisClient.Set("task:"+args.GetId(), TaskOnProcess, 0)
+	ret := make(chan *proto.Block, nodecount)
 	process := func(nodeid string) {
 		logrus.Println(nodeid)
 		block, err := ServiceConnection.
 			Nodes[nodeid].
-			Client.CreateUser(context.Background(), &proto.CreateUserRequest{
-			Id:        uuid.NewV4().String(),
-			Timestamp: time.Now().Format(time.RFC3339),
-			Data: &proto.User{
-				Id:   uuid.NewV4().String(),
-				Name: args.Name,
-				Nik:  args.Nik,
-			},
-		})
-
+			Client.CreateUser(context.Background(), &args)
 		if err != nil {
 			logrus.Error(err)
 			return
@@ -98,7 +91,57 @@ func PublishCreateUser(task Task) error {
 		return err
 	}
 
-	err = ServiceConnection.PushTask(Task{
+	err = ServiceConnection.PushTask(block.GetId(), Task{
+		Type: TaskPublishBlock,
+		Data: data,
+	})
+
+	return nil
+}
+
+func PublishMutateBalance(task Task) error {
+	var args proto.RequestTransaction
+
+	nodecount := len(ServiceConnection.Nodes)
+	if nodecount < 1 {
+		return errors.New("no node is being connected")
+	}
+
+	json.Unmarshal(task.Data, &args)
+
+	ServiceConnection.RedisClient.Set("task:"+args.GetId(), TaskOnProcess, 0)
+	ret := make(chan *proto.Block, nodecount)
+	process := func(nodeid string) {
+		logrus.Println(nodeid)
+		block, err := ServiceConnection.
+			Nodes[nodeid].
+			Client.MutateBalance(context.Background(), &args)
+		if err != nil {
+			logrus.Error(err)
+			return
+		}
+
+		ret <- block
+		fmt.Println("hello")
+		return
+	}
+
+	for nodeid, _ := range ServiceConnection.Nodes {
+		go process(nodeid)
+	}
+
+	block := <-ret
+
+	if block == nil {
+		return errors.New("failed to create create transaction")
+	}
+
+	data, err := json.Marshal(&block)
+	if err != nil {
+		return err
+	}
+
+	err = ServiceConnection.PushTask(block.GetId(), Task{
 		Type: TaskPublishBlock,
 		Data: data,
 	})
@@ -119,8 +162,6 @@ func PublishBlock(task Task) error {
 			Nodes[nodeid].
 			Client.PublishBlock(context.Background(), &block)
 
-		logrus.Info(block)
-		logrus.Info(err)
 		if err != nil {
 			logrus.Error(err)
 			return
@@ -138,5 +179,6 @@ func PublishBlock(task Task) error {
 	}
 	close(ret)
 
+	ServiceConnection.RedisClient.Set("task:"+block.GetId(), TaskOnComplete, 0)
 	return nil
 }

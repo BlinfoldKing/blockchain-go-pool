@@ -2,7 +2,9 @@ package resolver
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 
 	"github.com/blinfoldking/blockchain-go-node/proto"
 	"github.com/blinfoldking/blockchain-go-pool/service"
@@ -23,6 +25,13 @@ func (s *Resolver) Connect(ctx context.Context, args struct{ Url string }) (stat
 		return
 	}
 
+	_, err = service.ServiceConnection.Nodes[id].Client.Connect(context.Background(),
+		&proto.ConnectRequest{
+			Address: os.Getenv("SELF_URL"),
+		})
+	if err != nil {
+		return status, errors.New("failed to connect: " + err.Error())
+	}
 	return NodeResolver{
 		id,
 		service.ServiceConnection.Nodes[id].URL,

@@ -36,4 +36,5 @@ type Query {
 
 type Mutation {
     CreateUser(req: UserRequest!): QueueItem!
+    ShutdownAndRecoverAll(): Boolean!
 }

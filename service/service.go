@@ -4,6 +4,7 @@ import (
 	"github.com/adjust/rmq"
 	"github.com/blinfoldking/blockchain-go-node/proto"
 	"github.com/blinfoldking/blockchain-go-pool/rpc"
+	"github.com/go-redis/redis/v7"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -15,8 +16,9 @@ type Node struct {
 var ServiceConnection *Service
 
 type Service struct {
-	Nodes     map[string]Node
-	TaskQueue rmq.Queue
+	Nodes       map[string]Node
+	TaskQueue   rmq.Queue
+	RedisClient *redis.Client
 }
 
 func (s Service) ConnectBlockchainNode(url string) (id string, err error) {
@@ -39,6 +41,7 @@ func Init() *Service {
 	service := &Service{
 		nodes,
 		InitTaskQueue(),
+		NewRedisClient(),
 	}
 
 	return service

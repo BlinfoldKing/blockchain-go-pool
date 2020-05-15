@@ -35,7 +35,7 @@ func (b BlockResolver) PREVHASH() (string, error) {
 }
 
 func (b BlockResolver) HASH() (string, error) {
-	return b.prevHash, nil
+	return b.hash, nil
 }
 
 func (b BlockResolver) DATA() (JSON, error) {
